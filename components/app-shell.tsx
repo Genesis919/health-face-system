@@ -17,7 +17,7 @@ type NavigationItem = {
   roles: AppRole[];
 };
 
-cconst navigation: NavigationItem[] = [
+const navigation: NavigationItem[] = [
   { href: "/dashboard", label: "首頁", icon: Home, roles: ["nurse", "social_worker", "manager"] },
   { href: "/residents", label: "院民管理", icon: Users, roles: ["social_worker", "manager"] },
   { href: "/daily", label: "每日異常", icon: CalendarCheck2, roles: ["nurse", "manager"] },
