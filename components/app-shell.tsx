@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { CalendarCheck2, ClipboardPenLine, FileImage, Home, LogOut, Users } from "lucide-react";
+import {
+  CalendarCheck2,
+  ClipboardPenLine,
+  FileImage,
+  Home,
+  LogOut,
+  Users
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ROLE_LABELS } from "@/lib/constants";
 import { SITE_CONFIG } from "@/lib/site";
@@ -37,7 +44,11 @@ export function AppShell({
   const router = useRouter();
 
   const role = profile.role as AppRole;
-  const visibleNavigation = navigation.filter((item) => item.roles.includes(role));
+
+  // 🔑 只顯示該角色能看到的選單
+  const visibleNavigation = navigation.filter((item) =>
+    item.roles.includes(role)
+  );
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -49,13 +60,23 @@ export function AppShell({
     <div className="min-h-screen px-4 py-4 md:px-6">
       <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[280px_1fr]">
         <aside className="card p-6">
+          {/* 🔶 左上資訊 */}
           <div className="rounded-[28px] bg-gradient-to-br from-coral to-orange-400 p-6 text-white">
-            <p className="text-sm font-semibold opacity-80">{SITE_CONFIG.institutionName}</p>
-            <p className="mt-2 text-lg opacity-90">{SITE_CONFIG.systemName}</p>
-            <p className="mt-3 text-3xl font-black">{profile.full_name}</p>
-            <p className="mt-2 text-lg">{ROLE_LABELS[profile.role] ?? profile.role}</p>
+            <p className="text-sm font-semibold opacity-80">
+              {SITE_CONFIG.institutionName}
+            </p>
+            <p className="mt-2 text-lg opacity-90">
+              {SITE_CONFIG.systemName}
+            </p>
+            <p className="mt-3 text-3xl font-black">
+              {profile.full_name}
+            </p>
+            <p className="mt-2 text-lg">
+              {ROLE_LABELS[profile.role] ?? profile.role}
+            </p>
           </div>
 
+          {/* 🔑 側邊選單 */}
           <nav className="mt-6 space-y-2">
             {visibleNavigation.map((item) => {
               const Icon = item.icon;
@@ -67,7 +88,9 @@ export function AppShell({
                   href={item.href}
                   className={cn(
                     "flex items-center gap-3 rounded-2xl px-4 py-4 text-lg font-semibold transition",
-                    active ? "bg-peach text-coral" : "text-stone-600 hover:bg-orange-50"
+                    active
+                      ? "bg-peach text-coral"
+                      : "text-stone-600 hover:bg-orange-50"
                   )}
                 >
                   <Icon className="h-6 w-6" />
@@ -77,7 +100,11 @@ export function AppShell({
             })}
           </nav>
 
-          <button className="button-secondary mt-8 w-full gap-2" onClick={handleLogout}>
+          {/* 🔓 登出 */}
+          <button
+            className="button-secondary mt-8 w-full gap-2"
+            onClick={handleLogout}
+          >
             <LogOut className="h-5 w-5" />
             登出
           </button>
