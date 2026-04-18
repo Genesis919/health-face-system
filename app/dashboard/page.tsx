@@ -1,3 +1,23 @@
+import { redirect } from "next/navigation";
+import { getSessionProfile } from "@/lib/auth";
+
+export default async function ReviewPage() {
+  const { user, profile } = await getSessionProfile();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  if (!profile || profile.role !== "manager") {
+    redirect("/dashboard"); // 擋掉非主管
+  }
+
+  return (
+    <div>
+      {/* 原本的 review 畫面 */}
+    </div>
+  );
+}
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CalendarDays, ClipboardCheck, FileImage, Users } from "lucide-react";

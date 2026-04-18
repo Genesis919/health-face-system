@@ -17,11 +17,12 @@ type NavigationItem = {
   roles: AppRole[];
 };
 
-const navigation: NavigationItem[] = [
+cconst navigation: NavigationItem[] = [
   { href: "/dashboard", label: "首頁", icon: Home, roles: ["nurse", "social_worker", "manager"] },
   { href: "/residents", label: "院民管理", icon: Users, roles: ["social_worker", "manager"] },
   { href: "/daily", label: "每日異常", icon: CalendarCheck2, roles: ["nurse", "manager"] },
   { href: "/monthly", label: "月總結", icon: ClipboardPenLine, roles: ["nurse", "social_worker", "manager"] },
+  { href: "/preview", label: "健康臉譜預覽", icon: FileImage, roles: ["nurse", "social_worker", "manager"] },
   { href: "/review", label: "審核匯出", icon: FileImage, roles: ["manager"] }
 ];
 
