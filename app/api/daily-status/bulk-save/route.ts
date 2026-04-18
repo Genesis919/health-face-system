@@ -18,8 +18,22 @@ export async function POST(request: Request) {
     const auth = await requireRole(["nurse", "supervisor"]);
     if (!auth.ok) return auth.response;
 
-    body = await request.json();
-    const recordDate = typeof body.record_date === "string" ? body.record_date.trim() : "";
+   let body: any;
+
+try {
+  body = await request.json();
+} catch {
+  return Response.json({ error: "無法解析請求內容" }, { status: 400 });
+}
+
+if (!body || typeof body !== "object") {
+  return Response.json({ error: "請求格式錯誤" }, { status: 400 });
+}
+
+const recordDate =
+  typeof body.record_date === "string" ? body.record_date.trim() : "";
+
+const items = Array.isArray(body.items) ? body.items : [];
     const items = Array.isArray(body.items) ? body.items : [];
 
     if (!recordDate) {
