@@ -38,7 +38,6 @@ export default async function PreviewPage() {
             className="card p-6 transition hover:-translate-y-1"
           >
             <h2 className="text-xl font-bold">{resident.full_name}</h2>
-            <p className="mt-2 text-stone-600">房號：{resident.room_number ?? "未設定"}</p>
             <p className="mt-1 text-stone-600">月份：{monthKey}</p>
           </Link>
         ))}
