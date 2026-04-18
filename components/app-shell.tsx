@@ -8,12 +8,21 @@ import { ROLE_LABELS } from "@/lib/constants";
 import { SITE_CONFIG } from "@/lib/site";
 import type { Profile } from "@/lib/types";
 
-const navigation = [
-  { href: "/dashboard", label: "首頁", icon: Home },
-  { href: "/residents", label: "院民管理", icon: Users },
-  { href: "/daily", label: "每日異常", icon: CalendarCheck2 },
-  { href: "/monthly", label: "月總結", icon: ClipboardPenLine },
-  { href: "/review", label: "審核匯出", icon: FileImage }
+type AppRole = "nurse" | "social_worker" | "manager";
+
+type NavigationItem = {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  roles: AppRole[];
+};
+
+const navigation: NavigationItem[] = [
+  { href: "/dashboard", label: "首頁", icon: Home, roles: ["nurse", "social_worker", "manager"] },
+  { href: "/residents", label: "院民管理", icon: Users, roles: ["social_worker", "manager"] },
+  { href: "/daily", label: "每日異常", icon: CalendarCheck2, roles: ["nurse", "manager"] },
+  { href: "/monthly", label: "月總結", icon: ClipboardPenLine, roles: ["nurse", "social_worker", "manager"] },
+  { href: "/review", label: "審核匯出", icon: FileImage, roles: ["manager"] }
 ];
 
 export function AppShell({
@@ -25,6 +34,9 @@ export function AppShell({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+
+  const role = profile.role as AppRole;
+  const visibleNavigation = navigation.filter((item) => item.roles.includes(role));
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -40,12 +52,14 @@ export function AppShell({
             <p className="text-sm font-semibold opacity-80">{SITE_CONFIG.institutionName}</p>
             <p className="mt-2 text-lg opacity-90">{SITE_CONFIG.systemName}</p>
             <p className="mt-3 text-3xl font-black">{profile.full_name}</p>
-            <p className="mt-2 text-lg">{ROLE_LABELS[profile.role]}</p>
+            <p className="mt-2 text-lg">{ROLE_LABELS[profile.role] ?? profile.role}</p>
           </div>
+
           <nav className="mt-6 space-y-2">
-            {navigation.map((item) => {
+            {visibleNavigation.map((item) => {
               const Icon = item.icon;
               const active = pathname === item.href;
+
               return (
                 <Link
                   key={item.href}
@@ -61,11 +75,13 @@ export function AppShell({
               );
             })}
           </nav>
+
           <button className="button-secondary mt-8 w-full gap-2" onClick={handleLogout}>
             <LogOut className="h-5 w-5" />
             登出
           </button>
         </aside>
+
         <main className="space-y-6">{children}</main>
       </div>
     </div>
