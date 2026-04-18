@@ -3,93 +3,102 @@ import { requireRole } from "@/lib/auth";
 import { upsertManyDailyStatuses } from "@/lib/repository";
 import type { DailyStatusType } from "@/lib/types";
 
-const ALLOWED_STATUS = new Set(["normal", "unwell", "hospital"]);
+const ALLOWED_STATUS = new Set<DailyStatusType>(["normal", "unwell", "hospital"]);
+
+type BulkSaveItemInput = {
+  resident_id: string;
+  status_type: DailyStatusType;
+  original_note?: string | null;
+  family_note?: string | null;
+};
+
+type BulkSaveBody = {
+  record_date: string;
+  items: BulkSaveItemInput[];
+};
 
 function normalizeStatusType(value: unknown): DailyStatusType | null {
   if (typeof value !== "string") return null;
   const normalized = value.trim().toLowerCase();
-  return ALLOWED_STATUS.has(normalized) ? (normalized as DailyStatusType) : null;
+  return ALLOWED_STATUS.has(normalized as DailyStatusType) ? (normalized as DailyStatusType) : null;
+}
+
+function parseBody(raw: unknown): BulkSaveBody | null {
+  if (!raw || typeof raw !== "object") return null;
+
+  const bodyRecord = raw as Record<string, unknown>;
+  const recordDate = typeof bodyRecord.record_date === "string" ? bodyRecord.record_date.trim() : "";
+  const itemsRaw = Array.isArray(bodyRecord.items) ? bodyRecord.items : null;
+
+  if (!recordDate || !itemsRaw) return null;
+
+  const items: BulkSaveItemInput[] = [];
+
+  for (const itemRaw of itemsRaw) {
+    if (!itemRaw || typeof itemRaw !== "object") return null;
+
+    const itemRecord = itemRaw as Record<string, unknown>;
+    const residentId =
+      typeof itemRecord.resident_id === "string" ? itemRecord.resident_id.trim() : String(itemRecord.resident_id ?? "").trim();
+    const statusType = normalizeStatusType(itemRecord.status_type);
+
+    if (!residentId || !statusType) return null;
+
+    items.push({
+      resident_id: residentId,
+      status_type: statusType,
+      original_note: typeof itemRecord.original_note === "string" ? itemRecord.original_note.trim() : null,
+      family_note: typeof itemRecord.family_note === "string" ? itemRecord.family_note.trim() : null
+    });
+  }
+
+  return { record_date: recordDate, items };
 }
 
 export async function POST(request: Request) {
-  let body: Record<string, unknown> | null = null;
+  let requestBody: unknown = null;
 
   try {
     const auth = await requireRole(["nurse", "supervisor"]);
     if (!auth.ok) return auth.response;
 
-   let body: any;
+    requestBody = await request.json();
+    const parsed = parseBody(requestBody);
 
-try {
-  body = await request.json();
-} catch {
-  return Response.json({ error: "無法解析請求內容" }, { status: 400 });
-}
-
-if (!body || typeof body !== "object") {
-  return Response.json({ error: "請求格式錯誤" }, { status: 400 });
-}
-
-const recordDate =
-  typeof body.record_date === "string" ? body.record_date.trim() : "";
-
-const items = Array.isArray(body.items) ? body.items : [];
-    const items = Array.isArray(body.items) ? body.items : [];
-
-    if (!recordDate) {
-      return NextResponse.json({ success: false, error: "record_date 為必填。" }, { status: 400 });
+    if (!parsed) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Request body is invalid. Expect record_date and items with resident_id/status_type."
+        },
+        { status: 400 }
+      );
     }
 
-    if (items.length === 0) {
-      return NextResponse.json({ success: false, error: "請提供至少一筆院民狀態。" }, { status: 400 });
+    if (parsed.items.length === 0) {
+      return NextResponse.json(
+        { success: false, error: "items cannot be empty." },
+        { status: 400 }
+      );
     }
 
-    for (const item of items) {
-      const row = item as Record<string, unknown>;
-      const statusType = normalizeStatusType(row.status_type);
+    const payload = parsed.items.map((item: BulkSaveItemInput) => ({
+      resident_id: item.resident_id,
+      record_date: parsed.record_date,
+      status_type: item.status_type,
+      original_note: item.status_type === "normal" ? null : item.original_note ?? null,
+      family_note: item.status_type === "normal" ? null : item.family_note ?? null,
+      created_by: auth.user.id
+    }));
 
-      if (!row.resident_id || !statusType) {
-        return NextResponse.json(
-          { success: false, error: "resident_id 與 status_type 為必填，且 status_type 僅支援 normal、unwell、hospital。" },
-          { status: 400 }
-        );
-      }
-    }
-
-    const result = await upsertManyDailyStatuses(
-      items.map((item) => {
-        const row = item as Record<string, unknown>;
-        const statusType = normalizeStatusType(row.status_type);
-
-        if (!statusType) {
-          throw new Error(`不支援的 status_type：${String(row.status_type ?? "")}`);
-        }
-
-        return {
-          resident_id: String(row.resident_id).trim(),
-          record_date: recordDate,
-          status_type: statusType,
-          original_note:
-            statusType === "normal" ? null : typeof row.original_note === "string" ? row.original_note.trim() : null,
-          family_note:
-            statusType === "normal" ? null : typeof row.family_note === "string" ? row.family_note.trim() : null,
-          created_by: auth.user.id
-        };
-      })
-    );
-
+    const result = await upsertManyDailyStatuses(payload);
     return NextResponse.json({ success: true, count: result.length, statuses: result });
   } catch (error) {
-    console.error("[api/daily-status/bulk-save][POST] request body", body);
-    if (error instanceof Error) {
-      console.error("[api/daily-status/bulk-save][POST] error message", error.message);
-      console.error("[api/daily-status/bulk-save][POST] stack", error.stack);
-    } else {
-      console.error("[api/daily-status/bulk-save][POST] unknown error", error);
-    }
+    console.error("[api/daily-status/bulk-save][POST] request body", requestBody);
+    console.error("[api/daily-status/bulk-save][POST] error", error);
 
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "整房儲存每日異常失敗。" },
+      { success: false, error: error instanceof Error ? error.message : "Failed to save room records." },
       { status: 500 }
     );
   }

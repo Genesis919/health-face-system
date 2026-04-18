@@ -272,7 +272,7 @@ function normalizeDailyStatuses(rows: unknown[]) {
 }
 
 function normalizeDailyStatus(row: unknown) {
-  const item = row as DailyStatus & {
+  const item = row as Omit<DailyStatus, "status_type"> & {
     status_type: DailyStatusType | "poor";
     original_note?: string | null;
     family_note?: string | null;

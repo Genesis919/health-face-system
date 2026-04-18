@@ -170,9 +170,12 @@ export function ReviewBoard({
       if (cancelled) return;
 
       try {
+        const targetGroup = roomExportTarget;
+        if (!targetGroup) return;
+
         const zip = new JSZip();
 
-        for (const resident of roomExportTarget.residents) {
+        for (const resident of targetGroup.residents) {
           const node = exportNodeMapRef.current[resident.id];
           if (!node) {
             throw new Error(`${resident.full_name}${TEXT.missingExportNode}`);
@@ -188,10 +191,10 @@ export function ReviewBoard({
         }
 
         const zipBlob = await zip.generateAsync({ type: "blob" });
-        downloadBlob(zipBlob, buildRoomZipFilename(monthKey, roomExportTarget.room));
+        downloadBlob(zipBlob, buildRoomZipFilename(monthKey, targetGroup.room));
 
         if (!cancelled) {
-          setMessage(`${TEXT.roomLabel} ${roomExportTarget.room} ${TEXT.successRoomZip}`);
+          setMessage(`${TEXT.roomLabel} ${targetGroup.room} ${TEXT.successRoomZip}`);
           setErrorMessage("");
         }
       } catch (error) {
